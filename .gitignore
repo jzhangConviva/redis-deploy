@@ -1,0 +1,28 @@
+*.idea
+*.iml
+.DS_Store
+
+# Ignore maven build outputs
+target
+artifacts
+build
+
+# Ignore Jenkins build outputs
+.jenkinsTests
+
+# Ignore sbt generated artifacts
+.bsp/
+target/
+project/project/*
+project/target/*
+project/boot/
+
+# Unix stuff
+.history
+.cache
+
+# JVM
+*.class
+
+
+
