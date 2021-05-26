@@ -1,0 +1,72 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-proxy
+data:
+  proxy.conf: |
+    cluster redis-cluster:6379
+    bind 0.0.0.0
+    port 6379
+    threads 8
+    daemonize no
+    enable-cross-slot yes
+    log-level error
+    connections-pool-size 50
+    connections-pool-min-size 15
+    connections-pool-spawn-rate 2
+    connections-pool-spawn-every 500
+---
+# Redis-Proxy NodePort
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-proxy
+spec:
+  type: NodePort
+  ports:
+    - name: redis-proxy
+      nodePort: 30001
+      port: 6379
+      protocol: TCP
+      targetPort: 6379
+  selector:
+    app: redis-proxy
+---
+# Redis-Proxy Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-proxy
+  template:
+    metadata:
+      labels:
+        app: redis-proxy
+    spec:
+      containers:
+        - name: redis-proxy
+          #obtained from:https://www.gushiciku.cn/pl/gf5t/zh-hk
+          #refer from: https://hub.docker.com/layers/ableuler/redis-cluster-proxy/latest/images/sha256-6e267bbaaae1d165c43fbcc31942831cafa4faeda1a3d9c1bc08cea7e44da3ba
+          image: repo.prod.conviva.com:5043/redis-cluster-proxy:v1
+          imagePullPolicy: Always
+          #command: ["cat", "/data/proxy.conf/"]
+          command: ["redis-cluster-proxy"]
+          args:
+            - -c
+            - /data/proxy.conf
+          ports:
+            - name: redis-6379
+              containerPort: 6379
+              protocol: TCP
+          volumeMounts:
+            - name: redis-proxy-conf
+              mountPath: /data/
+      volumes:
+        - name: redis-proxy-conf
+          configMap:
+            name: redis-proxy

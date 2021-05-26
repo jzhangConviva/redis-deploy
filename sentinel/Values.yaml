@@ -1,0 +1,119 @@
+image:
+  registry: docker.io
+  repository: bitnami/redis
+  tag: 6.0.5-debian-10-r28
+  #tag: 6.2.3-debian-10-r13
+  pullSecrets: ""
+sentinel:
+  enabled: false
+  image:
+    repository: bitnami/redis-sentinel
+    tag: 6.0.5-debian-10-r28
+serviceAccount:
+  create: false
+rbac:
+  create: false
+networkPolicy:
+  enabled: false
+cluster:
+  enabled: true
+  slaveCount: 2
+clusterDomain: cluster.local
+securityContext:
+  enabled: true
+  fsGroup: 1001
+  runAsUser: 1001
+usePassword: false
+password: ""
+usePasswordFile: false
+redisPort: 6379
+master:
+  command: "/run.sh"
+  configmap:
+  disableCommands:
+    - FLUSHALL
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 5
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 5
+  persistence:
+    enabled: true
+    storageClass: openebs-hostpath
+    size: 1Gi
+  service:
+    type: NodePort
+    port: 6379
+    nodePort: 30022
+  statefulset:
+    updateStrategy: RollingUpdate
+slave:
+  service:
+    type: NodePort
+    port: 6379
+    nodePort: 30033
+  port: 6379
+  command: "/run.sh"
+  disableCommands:
+    - FLUSHALL
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 5
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 10
+    successThreshold: 1
+    failureThreshold: 5
+  persistence:
+    enabled: true
+    storageClass: openebs-hostpath
+    size: 1Gi
+  statefulset:
+    updateStrategy: RollingUpdate
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - redis
+          topologyKey: "kubernetes.io/hostname"
+metrics:
+  enabled: false
+volumePermissions:
+  enabled: false
+configmap: |-
+  appendonly yes
+  auto-aof-rewrite-percentage 100
+  auto-aof-rewrite-min-size 64mb
+  maxmemory 21474836480
+  daemonize no
+  # Disable RDB persistence, AOF persistence already enabled.
+  save ""
+sysctlImage:
+  enabled: true
+  mountHostSys: true
+  command:
+    - /bin/sh
+    - -c
+    - |-
+      install_packages procps
+      sysctl -w net.core.somaxconn=10000
+      echo never > /host-sys/kernel/mm/transparent_hugepage/enabled
